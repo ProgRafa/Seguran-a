@@ -50,6 +50,24 @@ class SBOX{
 
         return invBox;
     }
+
+    static aesRCon(){
+        let rcon = [ 
+            [ 0x00, 0x00, 0x00, 0x00 ],
+            [ 0x01, 0x00, 0x00, 0x00 ],
+            [ 0x02, 0x00, 0x00, 0x00 ],
+            [ 0x04, 0x00, 0x00, 0x00 ],
+            [ 0x08, 0x00, 0x00, 0x00 ],
+            [ 0x10, 0x00, 0x00, 0x00 ],
+            [ 0x20, 0x00, 0x00, 0x00 ],
+            [ 0x40, 0x00, 0x00, 0x00 ],
+            [ 0x80, 0x00, 0x00, 0x00 ],
+            [ 0x1b, 0x00, 0x00, 0x00 ],
+            [ 0x36, 0x00, 0x00, 0x00 ] 
+        ];
+
+        return rcon;
+    }
 }
 
 class AES{
@@ -58,32 +76,65 @@ class AES{
         let state = new Array(); // cópia da mensagem, a cifra será feita nele 
         let nb = 4; // tamanho do bloco da word baseado no algoritmo aes fixo em 128 bits
         let nk = password.length / 4; // tamanho do bloco da chave que pode ser 128, 192 ou 256 bits
-        let nr = nb + nk + 2; // número de rounds
         this.output;
+
+        let key = this.keyExpansion(password, nb, nk);
 
         //state copia a mensagem para um array de char
         for(var i in message)
             state.push(new Char(message[i]));
 
-        this.tState = state;    
-        //this.cipher(state, nb, nk, nr);
+         //state copia a mensagem para um array de char
+        for(var i in key){
+            for(var j in key[i])
+                key[i][j] = new Char(key[i][j].toString());    
+        }
+        this.tState = state;
+        this.tKey = key;
+        //this.cipher(state, key, nb, nk, 1);
     }
     
-    cipher(state, nb, nk, nr){
-        state = this.addRoundKey(state);
+    cipher(state, key, nb, nk){
+        let nr = nb + nk + 2;
 
-        for(let i = 0; i < this.nr + 1; i ++){
+        state = this.addRoundKey(state, key, nb, 0);
+
+        for(let round = 1; round < 3/*nr + 1*/; round++){
+            console.log(state);
             state = this.subBytes(state);
             state = this.shiftRows(state, nb);
-            if(i < this.nr)
-               state = this.mixColunms(state, nb);
-
-            state = this.addRoundKey(state);
+            state = this.mixColunms(state, nb);
+            state = this.addRoundKey(state, key, nb, round);
         }
+
+        //final round
+        state = this.subBytes(state);
+        state = this.shiftRows(state, nb);
+        state = this.addRoundKey(state, key, nb, 2);
 
         this.output = state;
     }
     
+    invCipher(cipher, key, nk, nb){
+        let nr = nb + nk + 2;
+        console.log(cipher);
+        cipher = this.addRoundKey(cipher, key, nb, 0);
+        console.log(cipher);
+        for(let round = 1; round < 3/*nr + 1*/; round++){
+            console.log(cipher);
+            cipher = this.invShiftRows(cipher, nb);
+            cipher = this.invSubBytes(cipher);
+            cipher = this.addRoundKey(cipher, key, nb, round);
+            cipher = this.invMixColunms(cipher, nb);
+        }
+
+        cipher = this.invShiftRows(cipher, nb);
+        cipher = this.invSubBytes(cipher);
+        cipher = this.addRoundKey(cipher, key, nb, 0);
+
+        this.output = cipher;    
+    }
+
     subBytes(state){
         let sbox = SBOX.aesBox();
 
@@ -98,7 +149,7 @@ class AES{
 
         for(var i in state)
             state[i] = invSbox[state[i].charCode10];
-
+    
         return state;
     }
 
@@ -147,40 +198,118 @@ class AES{
         return state;
     }
 
-    mixColunms(state, nb){
-        let aux = [
-                2, 3, 1, 1,
-                1, 2, 3, 1,
-                1, 1, 2, 3,
-                3, 1, 1, 2
-            ];
+    mixColunms(state){ 
+        for(let i = 0; i < 4; i++){
+            let copy = new Array();
+            let gf = new Array();
 
-        for(let i = 0; i < 16; i += 4){
-            let copy = new Array(4);
-            let x3 = new Array(4);
-
-            for(let j = 0; j < nb; j++){
-                copy[j] = state[i + j].charCode10
-                x3[j] = parseInt(state[i + j].charCode16 & 0x80 ? state[i + j].charCode16 << 1 ^ 0x011b : state[i + j].charCode16 << 1);    
+            for(let j = i; j < 16; j += 4){
+                copy.push(state[j].charCode10);
+                gf.push(state[j].charCode10 & 0x80 ? state[j].charCode10 << 1 ^ 0x11b : state[j].charCode10 << 1);    
             }
 
-            console.log(x3 + ' - ' + copy);
-
-            state[i].updateCharCode10(x3[0] ^ copy[1] ^ x3[1] ^ copy[2] ^ copy[3]); // {02}•a0 + {03}•a1 + a2 + a3
-            state[i + 1].updateCharCode10(copy[0] ^ x3[1] ^ copy[2] ^ x3[2] ^ copy[3]); // a0 • {02}•a1 + {03}•a2 + a3
-            state[i + 2].updateCharCode10(copy[0] ^ copy[1] ^ x3[2] ^ copy[3] ^ x3[3]); // a0 + a1 + {02}•a2 + {03}•a3
-            state[i + 3].updateCharCode10(copy[0] ^ x3[0] ^ copy[1] ^ copy[2] ^ x3[3]); // {03}•a0 + a1 + a2 + {02}•a3
+            state[i].updateCharCode10(gf[0] ^ copy[1] ^ gf[1] ^ copy[2] ^ copy[3]); // {02}•a0 + {03}•a1 + a2 + a3
+            state[i + 4].updateCharCode10(copy[0] ^ gf[1] ^ copy[2] ^ gf[2] ^ copy[3]); // a0 • {02}•a1 + {03}•a2 + a3
+            state[i + 8].updateCharCode10(copy[0] ^ copy[1] ^ gf[2] ^ copy[3] ^ gf[3]); // a0 + a1 + {02}•a2 + {03}•a3
+            state[i + 12].updateCharCode10(copy[0] ^ gf[0] ^ copy[1] ^ copy[2] ^ gf[3]); // {03}•a0 + a1 + a2 + {02}•a3
         }
         
         return state;
     }
 
-    addRoundKey(){
+    invMixColunms(state){
+        let gf = (n, i) => {
+            if(i == 14){
+                return (((((n << 1) ^ n) << 1) ^ n) << 1);
+            }else if(i == 13){
+                return ((((n << 1) ^ n) << 2) ^ n);
+            }else if(i == 11){
+                return ((((n << 2) ^ n) << 1) ^ n);
+            }else if(i == 9){
+                return ((n << 3) ^ n);
+            }
 
+            return 0;
+        };
+        
+        for(let i = 0; i < 4; i++){
+            let copy = new Array();
+
+            for(let j = i; j < 16; j += 4){
+                copy.push(state[j].charCode10);    
+            }
+
+            state[i].updateCharCode10(gf(copy[0], 14) ^ gf(copy[1], 11) ^ gf(copy[2], 13) ^ gf(copy[3], 9)); // {14}•a0 + {11}•a1 + {13}•a2 + {9}•a3
+            state[i + 4].updateCharCode10(gf(copy[0], 9) ^ gf(copy[1], 14) ^ gf(copy[2], 11) ^ gf(copy[3], 13)); // {9}•a0 + {14}•a1 + {11}•a2 + {13}•a3
+            state[i + 8].updateCharCode10(gf(copy[0], 13) ^ gf(copy[1], 9) ^ gf(copy[2], 14) ^ gf(copy[3], 11)); // {13}•a0 + {9}•a1 + {14}•a2 + {11}•a3
+            state[i + 12].updateCharCode10(gf(copy[0], 11) ^ gf(copy[1], 13) ^ gf(copy[2], 9) ^ gf(copy[3], 14)); // {11}•a0 + {13}•a1 + {9}•a2 + {14}•a3
+        }
+        
+        return state;
     }
 
-    keyExpansion(){
+    addRoundKey(state, key, nb, round){
+        let temp;
+        for (let i = 0; i < 16; i+=4) {
+            for(let j = 0; j < nb; j++) {
+                temp = state[i + j].charCode10 ^ key[round * 4 + j][i / 4].charCode10;
+                state[i + j].updateCharCode10(temp);
+            }
+        }
+        
+        return state;
+    }
 
+    
+    keyExpansion(key, nb, nk){
+        let nr = nb + nk + 2;
+        let word = new Array(nb * (nr + 1));
+        let temp = new Array(4);
+        const rcon = SBOX.aesRCon();
+
+        for(let i = 0; i < nk; i++){
+            let row = [key[4 * i], key[4 * i + 1], key[4 * i + 2], key[4 * i + 3]];
+            word[i] = row;
+        }
+
+        for (let i = nk; i < (nb * (nr + 1)); i++) {
+            word[i] = new Array(4);
+            
+            for (let j = 0; j < 4; j++) 
+                temp[j] = word[i-1][j];
+            
+            if (i % nk == 0) {
+                temp = this.subWord(this.rotWord(temp));
+                for (let j = 0; j < 4; j++) 
+                    temp[j] ^= rcon[i / nk][j];
+            }else if (nk > 6 && i % nk == 4) {
+                temp = this.subWord(temp);
+            }
+            
+            for (let j = 0; j < 4; j++) 
+                word[i][j] = word[i - nk][j] ^ temp[j];
+        }
+
+        return word;
+    }
+
+    rotWord(w){
+        const tmp = w[0];
+        for (let i = 0; i < 3; i++) 
+            w[i] = w[i+1];
+        
+        w[3] = tmp;
+
+        return w;
+    }
+
+    subWord(w) {
+        let sbox = SBOX.aesBox();
+
+        for (let i = 0; i < 4; i++) 
+            w[i] = sbox[w[i]];
+        
+        return w;
     }
 }
 
