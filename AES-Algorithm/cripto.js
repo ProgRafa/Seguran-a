@@ -18,6 +18,7 @@ class MessageScheduler{
         for(let i in this.message128){
             rCipher = aes.cipher(this.message128[i], key);
             this.message128[i] = '';
+            
             rCipher.forEach((item) => {
                 this.message128[i] += item.byte;  
                 criptMessage += item.charCode16;
@@ -27,20 +28,21 @@ class MessageScheduler{
         return criptMessage;
     }
 
-    decrypt(password){
+    decrypt(key){
         let aes = new AES();
         let decryptMessage = '';
+        let rInvCipher;
 
         for(var i in this.message128){
-            aes = new AES(this.message128[i].join(''), password);
+            rInvCipher = aes.invCipher(this.message128[i], key) 
             this.message128[i] = '';
-            aes.output.forEach((item) => {
+            
+            rInvCipher.forEach((item) => {
                 this.message128[i] += item.byte;  
-                criptMessage += item.charCode16;
-                j++;
+                decryptMessage += item.byte;
             });
         } 
 
-        return criptMessage;
+        return decryptMessage.trim();
     }
 }
