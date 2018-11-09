@@ -1,5 +1,8 @@
 class Char {
     constructor(char){
+        if(typeof char == 'number')
+            char = String.fromCharCode(char);
+              
         this.byte = char;
         this.bits = char.charCodeAt().toString(2).padStart(8, '0').split('');
         this.charCode10 = char.charCodeAt();

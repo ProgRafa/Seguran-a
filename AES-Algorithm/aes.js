@@ -73,66 +73,93 @@ class SBOX{
 class AES{
     constructor(message, password){
         
-        let state = new Array(); // cópia da mensagem, a cifra será feita nele 
-        let nb = 4; // tamanho do bloco da word baseado no algoritmo aes fixo em 128 bits
-        let nk = password.length / 4; // tamanho do bloco da chave que pode ser 128, 192 ou 256 bits
-        this.output;
+        // let state = new Array(); // cópia da mensagem, a cifra será feita nele 
+        // let nb = 4; // tamanho do bloco da word baseado no algoritmo aes fixo em 128 bits
+        // let nk = password.length / 4; // tamanho do bloco da chave que pode ser 128, 192 ou 256 bits
+        //this.output;
 
-        let key = this.keyExpansion(password, nb, nk);
+        // let key = AES.keyExpansion(password, nb, nk);
 
         //state copia a mensagem para um array de char
-        for(var i in message)
-            state.push(new Char(message[i]));
+        // for(var i in message)
+        //     state.push(new Char(message[i]));
 
          //state copia a mensagem para um array de char
-        for(var i in key){
-            for(var j in key[i])
-                key[i][j] = new Char(key[i][j].toString());    
-        }
-        this.tState = state;
-        this.tKey = key;
-        //this.cipher(state, key, nb, nk, 1);
+        // for(var i in key){
+        //     for(var j in key[i])
+        //         key[i][j] = new Char(key[i][j].toString());    
+        // }
+
+        // this.cipher(state, key, nb, nk);
+
+        // let cipher = new Array();
+        // this.output.forEach((item) => cipher.push(item));
+
+        // this.invCipher(cipher, key, nb, nk);
     }
     
-    cipher(state, key, nb, nk){
+    charEncode(word){
+        let listChar = new Array();
+        word.split('').forEach((item) => listChar.push(new Char(item)));
+
+        return listChar;
+    }
+
+    //recebe uma string state e uma string key
+    //retorna a string state cifrada
+    cipher(state, key){
+        let nb = 4;
+        let nk = key.length / 4;
         let nr = nb + nk + 2;
+
+        state = this.charEncode(state);
+        key = this.charEncode(key);
+
+        key = this.keyExpansion(key);
 
         state = this.addRoundKey(state, key, nb, 0);
 
-        for(let round = 1; round < 3/*nr + 1*/; round++){
-            console.log(state);
+        for(let round = 1; round < nr; round++){
             state = this.subBytes(state);
-            state = this.shiftRows(state, nb);
-            state = this.mixColunms(state, nb);
+            state = this.shiftRows(state);
+            state = this.mixColunms(state);
             state = this.addRoundKey(state, key, nb, round);
         }
 
         //final round
         state = this.subBytes(state);
-        state = this.shiftRows(state, nb);
-        state = this.addRoundKey(state, key, nb, 2);
+        state = this.shiftRows(state);
+        state = this.addRoundKey(state, key, nb, nr);
 
-        this.output = state;
+        return state;
     }
     
-    invCipher(cipher, key, nk, nb){
+    //recebe uma string cipher e uma string key
+    //retorna uma string inversa a cifra
+    invCipher(cipher, key){
+        let nb = 4;
+        let nk = key.length / 4;
         let nr = nb + nk + 2;
-        console.log(cipher);
-        cipher = this.addRoundKey(cipher, key, nb, 0);
-        console.log(cipher);
-        for(let round = 1; round < 3/*nr + 1*/; round++){
-            console.log(cipher);
-            cipher = this.invShiftRows(cipher, nb);
+
+        cipher = this.charEncode(cipher);
+        key = this.charEncode(key);
+
+        key = this.keyExpansion(key);
+
+        cipher = this.addRoundKey(cipher, key, nb, nr);
+
+        for(let round = 1; round < nr; round++){
+            cipher = this.invShiftRows(cipher);
             cipher = this.invSubBytes(cipher);
-            cipher = this.addRoundKey(cipher, key, nb, round);
-            cipher = this.invMixColunms(cipher, nb);
+            cipher = this.addRoundKey(cipher, key, nb, nr - round);
+            cipher = this.invMixColunms(cipher); 
         }
 
-        cipher = this.invShiftRows(cipher, nb);
+        cipher = this.invShiftRows(cipher);
         cipher = this.invSubBytes(cipher);
         cipher = this.addRoundKey(cipher, key, nb, 0);
 
-        this.output = cipher;    
+        return cipher;   
     }
 
     subBytes(state){
@@ -153,15 +180,15 @@ class AES{
         return state;
     }
 
-    shiftRows(state, nb){
+    shiftRows(state){
         let r = 1;
         let word;
 
         for(let i = 4; i < 16; i+=4){
-            word = state.slice(i, i + nb);
+            word = state.slice(i, i + 4);
 
-            for(let j = 0; j < nb; j++){
-                let pos = (i + j) % nb + r; 
+            for(let j = 0; j < 4; j++){
+                let pos = (i + j) % 4 + r; 
 
                 if(pos >= 4)
                     state[i + j] = word[pos - 4];    
@@ -175,15 +202,15 @@ class AES{
         return state;
     }
 
-    invShiftRows(state, nb){
+    invShiftRows(state){
         let r = 1;
         let word;
 
         for(let i = 4; i < 16; i+=4){
-            word = state.slice(i, i + nb);
+            word = state.slice(i, i + 4);
 
-            for(let j = 0; j < nb; j++){
-                let pos = (i + j) % nb + r;   
+            for(let j = 0; j < 4; j++){
+                let pos = (i + j) % 4 + r;   
 
                 if(pos >= 4){
                     state[i + pos - 4] = word[j];    
@@ -205,13 +232,14 @@ class AES{
 
             for(let j = i; j < 16; j += 4){
                 copy.push(state[j].charCode10);
-                gf.push(state[j].charCode10 & 0x80 ? state[j].charCode10 << 1 ^ 0x11b : state[j].charCode10 << 1);    
+                /*state[j].charCode10 & 0x80 ? state[j].charCode10 << 1 ^ 0x11b :*/ 
+                gf.push(Integer.encode_uint16(state[j].charCode10 << 1));    
             }
 
-            state[i].updateCharCode10(gf[0] ^ copy[1] ^ gf[1] ^ copy[2] ^ copy[3]); // {02}•a0 + {03}•a1 + a2 + a3
-            state[i + 4].updateCharCode10(copy[0] ^ gf[1] ^ copy[2] ^ gf[2] ^ copy[3]); // a0 • {02}•a1 + {03}•a2 + a3
-            state[i + 8].updateCharCode10(copy[0] ^ copy[1] ^ gf[2] ^ copy[3] ^ gf[3]); // a0 + a1 + {02}•a2 + {03}•a3
-            state[i + 12].updateCharCode10(copy[0] ^ gf[0] ^ copy[1] ^ copy[2] ^ gf[3]); // {03}•a0 + a1 + a2 + {02}•a3
+            state[i] = new Char(gf[0] ^ copy[1] ^ gf[1] ^ copy[2] ^ copy[3]); // {02}•a0 + {03}•a1 + a2 + a3
+            state[i + 4] = new Char(copy[0] ^ gf[1] ^ copy[2] ^ gf[2] ^ copy[3]); // a0 • {02}•a1 + {03}•a2 + a3
+            state[i + 8] = new Char(copy[0] ^ copy[1] ^ gf[2] ^ copy[3] ^ gf[3]); // a0 + a1 + {02}•a2 + {03}•a3
+            state[i + 12] = new Char(copy[0] ^ gf[0] ^ copy[1] ^ copy[2] ^ gf[3]); // {03}•a0 + a1 + a2 + {02}•a3
         }
         
         return state;
@@ -220,13 +248,13 @@ class AES{
     invMixColunms(state){
         let gf = (n, i) => {
             if(i == 14){
-                return (((((n << 1) ^ n) << 1) ^ n) << 1);
+                return Integer.encode_uint16(((((n << 1) ^ n) << 1) ^ n) << 1);
             }else if(i == 13){
-                return ((((n << 1) ^ n) << 2) ^ n);
+                return Integer.encode_uint16((((n << 1) ^ n) << 2) ^ n);
             }else if(i == 11){
-                return ((((n << 2) ^ n) << 1) ^ n);
+                return Integer.encode_uint16((((n << 2) ^ n) << 1) ^ n);
             }else if(i == 9){
-                return ((n << 3) ^ n);
+                return Integer.encode_uint16(n << 3) ^ n;
             }
 
             return 0;
@@ -239,10 +267,10 @@ class AES{
                 copy.push(state[j].charCode10);    
             }
 
-            state[i].updateCharCode10(gf(copy[0], 14) ^ gf(copy[1], 11) ^ gf(copy[2], 13) ^ gf(copy[3], 9)); // {14}•a0 + {11}•a1 + {13}•a2 + {9}•a3
-            state[i + 4].updateCharCode10(gf(copy[0], 9) ^ gf(copy[1], 14) ^ gf(copy[2], 11) ^ gf(copy[3], 13)); // {9}•a0 + {14}•a1 + {11}•a2 + {13}•a3
-            state[i + 8].updateCharCode10(gf(copy[0], 13) ^ gf(copy[1], 9) ^ gf(copy[2], 14) ^ gf(copy[3], 11)); // {13}•a0 + {9}•a1 + {14}•a2 + {11}•a3
-            state[i + 12].updateCharCode10(gf(copy[0], 11) ^ gf(copy[1], 13) ^ gf(copy[2], 9) ^ gf(copy[3], 14)); // {11}•a0 + {13}•a1 + {9}•a2 + {14}•a3
+            state[i] = new Char(gf(copy[0], 14) ^ gf(copy[1], 11) ^ gf(copy[2], 13) ^ gf(copy[3], 9)); // {14}•a0 + {11}•a1 + {13}•a2 + {9}•a3
+            state[i + 4] = new Char(gf(copy[0], 9) ^ gf(copy[1], 14) ^ gf(copy[2], 11) ^ gf(copy[3], 13)); // {9}•a0 + {14}•a1 + {11}•a2 + {13}•a3
+            state[i + 8] = new Char(gf(copy[0], 13) ^ gf(copy[1], 9) ^ gf(copy[2], 14) ^ gf(copy[3], 11)); // {13}•a0 + {9}•a1 + {14}•a2 + {11}•a3
+            state[i + 12] = new Char(gf(copy[0], 11) ^ gf(copy[1], 13) ^ gf(copy[2], 9) ^ gf(copy[3], 14)); // {11}•a0 + {13}•a1 + {9}•a2 + {14}•a3
         }
         
         return state;
@@ -250,10 +278,10 @@ class AES{
 
     addRoundKey(state, key, nb, round){
         let temp;
-        for (let i = 0; i < 16; i+=4) {
+        for (let i = 0; i < 16; i += 4) {
             for(let j = 0; j < nb; j++) {
-                temp = state[i + j].charCode10 ^ key[round * 4 + j][i / 4].charCode10;
-                state[i + j].updateCharCode10(temp);
+                temp = new Char(state[i + j].charCode10 ^ key[round * 4 + j][i / 4]);
+                state[i + j] = temp;
             }
         }
         
@@ -261,14 +289,16 @@ class AES{
     }
 
     
-    keyExpansion(key, nb, nk){
+    keyExpansion(key){
+        let nb = 4;
+        let nk = key.length / 4;
         let nr = nb + nk + 2;
         let word = new Array(nb * (nr + 1));
         let temp = new Array(4);
         const rcon = SBOX.aesRCon();
 
         for(let i = 0; i < nk; i++){
-            let row = [key[4 * i], key[4 * i + 1], key[4 * i + 2], key[4 * i + 3]];
+            let row = [key[4 * i].charCode10, key[4 * i + 1].charCode10, key[4 * i + 2].charCode10, key[4 * i + 3].charCode10];
             word[i] = row;
         }
 
@@ -314,7 +344,7 @@ class AES{
 }
 
 window.onload = function(){
-    aes = new AES('abcdefghijklmnop', '1234567890123456');
+    //aes = new AES('aaaaaaaaaaaaaaaa', 'aaaaaaaaaaaaaaaa');
 
     
 }
