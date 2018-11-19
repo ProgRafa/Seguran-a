@@ -1,6 +1,14 @@
 class MessageScheduler{
-    constructor(message){
+    constructor(message, isHex){
         this.message128 = new Array();
+
+        if(isHex){
+            let temp = '';
+            for(let i = 0; i < message.length; i+=2)
+                temp += String.fromCharCode(parseInt(message.slice(i, i + 2), 16));
+                
+            message = temp;
+        }
 
         for(let i = 0; i < message.length; i += 16){
             this.message128[i / 16] = '';
@@ -21,7 +29,7 @@ class MessageScheduler{
             
             rCipher.forEach((item) => {
                 this.message128[i] += item.byte;  
-                criptMessage += item.charCode16;
+                criptMessage += item.charCode16.padStart(2, '0');
             });
         } 
 

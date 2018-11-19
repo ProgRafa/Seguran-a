@@ -342,9 +342,3 @@ class AES{
         return w;
     }
 }
-
-window.onload = function(){
-    //aes = new AES('aaaaaaaaaaaaaaaa', 'aaaaaaaaaaaaaaaa');
-
-    
-}

@@ -2,11 +2,27 @@
 
 <html>
     <head>
-
+        <meta charset="UTF-8">
         <script src='./encodes.js'></script>
         <script src='./aes.js'></script>
         <script src='./cripto.js'></script>
+        <script src='./main.js'></script>
+        <link rel="stylesheet" href="./main.css">
     </head>
     <body>
+        <textarea id="input_text"></textarea>
+        <div class="buttons">
+            <button id="copy">Copiar</button>
+            <button id="cifrar">Cifrar</button>
+            <button id="decifrar">Decifrar</button>
+        </div>
+        <p id="output_text"></p>
+        <div id="file_content">
+            <input type="text" id="key" maxlength="32" minlength="16" placeholder="Insira uma chave com 16, 24 ou 32 caracteres"/>
+            <p id="count">0 caracteres</p>
+            <p id="name_archive">Importar Arquivo</p>
+            <label id="file" for="archive">+</label>
+            <input type="file" id="archive" onchange="getContentArchive()" accept=".pdf,.txt"/>
+        </div>
     </body>
 </html>

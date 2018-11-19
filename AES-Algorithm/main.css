@@ -1,0 +1,92 @@
+body{
+    font-family: Arial, Helvetica, sans-serif;
+    display: flex;
+    flex-wrap: wrap;
+}
+
+#output_text, #input_text{
+    display: flex;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 14px;
+    width: 500px;
+    height: 310px;
+    border: 2px solid black;
+    overflow: scroll;
+    word-break: break-all;
+    resize: none;
+    padding: 5px;
+    margin: auto;
+    cursor: text;
+}
+
+.buttons{
+    width: 110px;
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap; 
+}
+
+#file{
+    display: flex;
+    color: white;
+    font-size: 2em;
+    font-weight: 300;
+    line-height: 20px;
+    justify-content: center;
+    margin: 0 10px;
+    padding: 5px;
+    border: 3px solid rgba(224, 84, 84, 0.9);
+    border-radius: 3px;
+    background: rgba(224, 84, 84, 0.5);
+    width: 20px;
+    height: 20px;
+    outline: none;
+    cursor: pointer;
+}
+
+#file_content{
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    font-family: sans-serif;
+    margin: 20px auto;
+    padding: 5px 10px;
+    width: 800px;
+}
+
+button{
+    font-size: 16px;
+    width: 100px;
+    height: 30px;
+    padding: 3px;
+    border: 2px solid rgba(42, 80, 210, 1);
+    border-radius: 3px;
+    color: white;
+    background: rgba(42, 80, 210, .9);
+    cursor: pointer;
+}
+
+#key{
+    width: 280px;
+    height: 24px;
+    padding: 3px;
+    border: 2px solid black;
+    border-radius: 3px;
+}
+
+.error{
+    color: red!important;
+    border-color: red!important;
+}
+
+#key, #cifrar, #decifrar, #input_text{
+    outline: none;
+}
+
+#archive{
+    display: none;
+}
+
+#count{
+    color: red;
+}
